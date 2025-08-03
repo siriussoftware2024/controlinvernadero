@@ -38,6 +38,7 @@ const SetpointControl = ({
     };
 
     const getProgressColor = () => {
+        if (loading) return 'bg-blue-400';
         switch (color) {
             case 'green':
                 return 'bg-green-500';
@@ -52,6 +53,7 @@ const SetpointControl = ({
     };
 
     const getIconColor = () => {
+        if (loading) return 'text-blue-600 bg-blue-100';
         switch (color) {
             case 'green':
                 return 'text-green-600 bg-green-100';
@@ -65,20 +67,27 @@ const SetpointControl = ({
         }
     };
 
+    const getCardColor = () => {
+        if (loading) return 'border-blue-200 bg-blue-50';
+        return 'border-gray-200 bg-white';
+    };
+
     return (
-        <div className="px-6 py-2 rounded-xl border-2 border-gray-200 bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+        <div className={`px-6 py-2 rounded-xl border-2 ${getCardColor()} shadow-lg hover:shadow-xl transition-all duration-300 ${loading ? 'ring-2 ring-blue-300' : ''}`}>
             <div className="flex justify-between items-center space-x-3 mb-1">
                 <div className='flex items-center space-x-3'>
                     <div className={`p-2 rounded-lg ${getIconColor()}`}>
                         {icon}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+                        {loading && (
+                            <span className="text-xs text-blue-600 animate-pulse">
+                                Actualizando...
+                            </span>
+                        )}
+                    </div>
                 </div>
-
-
-
-
 
                 <div className="space-y-1">
                     <div className="flex items-center justify-between">
@@ -94,7 +103,7 @@ const SetpointControl = ({
                                 max={max}
                                 step={step}
                                 disabled={loading}
-                                className="w-20 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-20 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${loading ? 'bg-blue-50 cursor-not-allowed' : ''}`}
                             />
                             <span className="text-sm text-gray-600">{unit}</span>
                         </div>
@@ -102,32 +111,27 @@ const SetpointControl = ({
                 </div>
             </div>
 
-
-            <div className="relative">
-                <input
-                    type="range"
-                    min={min}
-                    max={max}
-                    step={step}
-                    value={value}
-                    onChange={handleSliderChange}
-                    disabled={loading}
-                    className="w-full h- bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                    style={{
-                        background: `linear-gradient(to right, ${getProgressColor()} 0%, ${getProgressColor()} ${((value - min) / (max - min)) * 100}%, #e5e7eb ${((value - min) / (max - min)) * 100}%, #e5e7eb 100%)`
-                    }}
-                />
-                <div className="flex justify-between text-xs text-gray-500">
+            <div className="space-y-2">
+                <div className="flex justify-between text-sm text-gray-600">
                     <span>{min}{unit}</span>
                     <span>{max}{unit}</span>
                 </div>
-            </div>
-
-            {loading && (
-                <div className="text-center">
-                    <div className="text-sm text-gray-500">Actualizando...</div>
+                <div className="relative">
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={inputValue}
+                        onChange={handleSliderChange}
+                        disabled={loading}
+                        className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
+                        style={{
+                            background: `linear-gradient(to right, ${getProgressColor()} 0%, ${getProgressColor()} ${((inputValue - min) / (max - min)) * 100}%, #e5e7eb ${((inputValue - min) / (max - min)) * 100}%, #e5e7eb 100%)`
+                        }}
+                    />
                 </div>
-            )}
+            </div>
         </div>
     );
 };

@@ -35,4 +35,111 @@ code {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
-} 
+}
+
+/* Custom animations for actuators */
+@keyframes bulb-glow {
+
+  0%,
+  100% {
+    filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.5));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.8));
+  }
+}
+
+@keyframes fan-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pump-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes sensor-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animation classes */
+.animate-bulb-glow {
+  animation: bulb-glow 2s ease-in-out infinite;
+}
+
+.animate-fan-spin {
+  animation: fan-spin 1s linear infinite;
+}
+
+.animate-pump-pulse {
+  animation: pump-pulse 1.5s ease-in-out infinite;
+}
+
+.animate-sensor-pulse {
+  animation: sensor-pulse 3s ease-in-out infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Status indicators */
+.status-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.status-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.status-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.status-normal {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}

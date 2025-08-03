@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StatusIndicator = ({ isConnected, lastUpdate, error }) => {
+const StatusIndicator = ({ isConnected, lastUpdate, error, connectionInfo }) => {
     const getStatusColor = () => {
         if (error) return 'text-red-600 bg-red-100';
         if (isConnected) return 'text-green-600 bg-green-100';
@@ -48,8 +48,8 @@ const StatusIndicator = ({ isConnected, lastUpdate, error }) => {
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md px-4 py-2">
-            <div className="flex items-center justify-between">
+        <div className="bg-white rounded-lg shadow-md px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-3">
                     <div className={`p-2 rounded-lg ${getStatusColor()}`}>
                         {getStatusIcon()}
@@ -66,8 +66,38 @@ const StatusIndicator = ({ isConnected, lastUpdate, error }) => {
                 </div>
             </div>
 
+            {/* Connection Information */}
+            {connectionInfo && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-2 mb-2">
+                    <div className="flex items-center space-x-2 mb-1">
+                        <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-xs font-medium text-blue-800">Información de Conexión</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span className="text-gray-600">Arduino IP:</span>
+                            <span className="ml-1 font-mono text-blue-700">{connectionInfo.ip}</span>
+                        </div>
+                        <div>
+                            <span className="text-gray-600">Puerto:</span>
+                            <span className="ml-1 font-mono text-blue-700">{connectionInfo.port}</span>
+                        </div>
+                        <div className="col-span-2">
+                            <span className="text-gray-600">URL Base:</span>
+                            <span className="ml-1 font-mono text-blue-700 break-all">{connectionInfo.baseUrl}</span>
+                        </div>
+                        <div>
+                            <span className="text-gray-600">Timeout:</span>
+                            <span className="ml-1 font-mono text-blue-700">{connectionInfo.timeout}ms</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {error && (
-                <div className="mt-1 p-1 bg-red-50 border border-red-200 rounded-md">
+                <div className="p-2 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-700">{error}</p>
                 </div>
             )}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import SensorCard from './components/SensorCard';
-import ActuatorControl from './components/ActuatorControl';
+import ActuatorIndicator from './components/ActuatorIndicator';
+import RemoteControl from './components/RemoteControl';
 import SetpointControl from './components/SetpointControl';
 import StatusIndicator from './components/StatusIndicator';
+import Notification from './components/Notification';
 import ConnectionTest from './components/ConnectionTest';
 import SimpleTest from './components/SimpleTest';
 import { greenhouseAPI } from './services/api';
@@ -62,10 +64,6 @@ function App() {
     });
 
     const [loading, setLoading] = useState({
-        bulb: false,
-        ventTemp: false,
-        ventHum: false,
-        pump: false,
         remote1: false,
         remote2: false,
         tempSetpoint: false,
@@ -78,11 +76,67 @@ function App() {
         error: null
     });
 
-    // Fetch sensor data
+    const [notification, setNotification] = useState({
+        isVisible: false,
+        message: '',
+        type: 'info'
+    });
+
+    // Track recent manual changes to avoid auto-refresh conflicts
+    const [recentChanges, setRecentChanges] = useState({
+        remote1On: null,
+        remote2On: null,
+        setpointTemp: null,
+        setpointHum: null
+    });
+
+    // Get connection information
+    const connectionInfo = greenhouseAPI.getConnectionInfo();
+
+    // Show notification function
+    const showNotification = (message, type = 'info') => {
+        setNotification({
+            isVisible: true,
+            message,
+            type
+        });
+    };
+
+    // Hide notification function
+    const hideNotification = () => {
+        setNotification(prev => ({
+            ...prev,
+            isVisible: false
+        }));
+    };
+
+    // Fetch sensor data with smart conflict resolution
     const fetchData = useCallback(async () => {
         try {
             const data = await greenhouseAPI.getData();
-            setSensorData(data);
+
+            // Merge data with recent changes to avoid conflicts
+            const mergedData = { ...data };
+
+            // Check if we have recent manual changes that shouldn't be overwritten
+            Object.keys(recentChanges).forEach(key => {
+                if (recentChanges[key] !== null) {
+                    const timeSinceChange = Date.now() - recentChanges[key];
+                    // If change was made less than 3 seconds ago, keep the optimistic value
+                    if (timeSinceChange < 3000) {
+                        // Preserve the optimistic value from current state
+                        mergedData[key] = sensorData[key];
+                    } else {
+                        // Clear the recent change tracking
+                        setRecentChanges(prev => ({
+                            ...prev,
+                            [key]: null
+                        }));
+                    }
+                }
+            });
+
+            setSensorData(mergedData);
             setConnectionStatus({
                 isConnected: true,
                 lastUpdate: new Date(),
@@ -95,30 +149,55 @@ function App() {
                 error: 'Error al conectar con el sistema'
             });
         }
-    }, [connectionStatus.lastUpdate]);
+    }, [connectionStatus.lastUpdate, recentChanges, sensorData]);
 
-    // Control actuators
-    const toggleActuator = async (actuatorId, actuatorName) => {
+    // Control remote actuators only
+    const toggleRemoteActuator = async (actuatorId, actuatorName) => {
         setLoading(prev => ({ ...prev, [actuatorName]: true }));
 
+        // Update local state immediately for instant feedback (optimistic update)
+        const isCurrentlyOn = sensorData[actuatorName];
+        setSensorData(prev => ({
+            ...prev,
+            [actuatorName]: !isCurrentlyOn
+        }));
+
+        // Track this manual change
+        setRecentChanges(prev => ({
+            ...prev,
+            [actuatorName]: Date.now()
+        }));
+
         try {
-            const isCurrentlyOn = sensorData[actuatorName];
+            // Send command to Arduino
             if (isCurrentlyOn) {
                 await greenhouseAPI.turnOffActuator(actuatorId);
             } else {
                 await greenhouseAPI.turnOnActuator(actuatorId);
             }
 
-            // Update local state immediately for better UX
-            setSensorData(prev => ({
-                ...prev,
-                [actuatorName]: !isCurrentlyOn
-            }));
+            // Wait a bit longer before refreshing to allow Arduino to process the command
+            setTimeout(fetchData, 1000);
 
-            // Refresh data after a short delay
-            setTimeout(fetchData, 500);
+            // Show success notification
+            showNotification(`${actuatorName} ${!isCurrentlyOn ? 'activado' : 'desactivado'} correctamente`, 'success');
         } catch (error) {
             console.error(`Error toggling ${actuatorName}:`, error);
+
+            // Revert the optimistic update on error
+            setSensorData(prev => ({
+                ...prev,
+                [actuatorName]: isCurrentlyOn
+            }));
+
+            // Clear the recent change tracking
+            setRecentChanges(prev => ({
+                ...prev,
+                [actuatorName]: null
+            }));
+
+            // Show error notification
+            showNotification(`Error al cambiar ${actuatorName}: ${error.message}`, 'error');
         } finally {
             setLoading(prev => ({ ...prev, [actuatorName]: false }));
         }
@@ -128,21 +207,51 @@ function App() {
     const updateSetpoint = async (type, value) => {
         setLoading(prev => ({ ...prev, [`${type}Setpoint`]: true }));
 
+        const setpointKey = `setpoint${type.charAt(0).toUpperCase() + type.slice(1)}`;
+
+        // Update local state immediately for instant feedback
+        setSensorData(prev => ({
+            ...prev,
+            [setpointKey]: value
+        }));
+
+        // Track this manual change
+        setRecentChanges(prev => ({
+            ...prev,
+            [setpointKey]: Date.now()
+        }));
+
         try {
+            // Send command to Arduino
             if (type === 'temp') {
                 await greenhouseAPI.setTemperatureSetpoint(value);
             } else if (type === 'hum') {
                 await greenhouseAPI.setHumiditySetpoint(value);
             }
 
-            setSensorData(prev => ({
-                ...prev,
-                [`setpoint${type.charAt(0).toUpperCase() + type.slice(1)}`]: value
-            }));
+            // Quick refresh to confirm the change
+            setTimeout(fetchData, 200);
 
-            setTimeout(fetchData, 500);
+            // Show success notification
+            showNotification(`Referencia de ${type === 'temp' ? 'temperatura' : 'humedad'} actualizada a ${value}${type === 'temp' ? '°C' : '%'}`, 'success');
         } catch (error) {
             console.error(`Error updating ${type} setpoint:`, error);
+
+            // Revert the optimistic update on error
+            const originalValue = type === 'temp' ? sensorData.setpointTemp : sensorData.setpointHum;
+            setSensorData(prev => ({
+                ...prev,
+                [setpointKey]: originalValue
+            }));
+
+            // Clear the recent change tracking
+            setRecentChanges(prev => ({
+                ...prev,
+                [setpointKey]: null
+            }));
+
+            // Show error notification
+            showNotification(`Error al actualizar referencia de ${type}: ${error.message}`, 'error');
         } finally {
             setLoading(prev => ({ ...prev, [`${type}Setpoint`]: false }));
         }
@@ -179,6 +288,14 @@ function App() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-greenhouse-100 to-greenhouse-500">
+            {/* Notification Component */}
+            <Notification
+                message={notification.message}
+                type={notification.type}
+                isVisible={notification.isVisible}
+                onClose={hideNotification}
+            />
+
             <div className="container mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="text-center mb-8">
@@ -196,16 +313,9 @@ function App() {
                         isConnected={connectionStatus.isConnected}
                         lastUpdate={connectionStatus.lastUpdate}
                         error={connectionStatus.error}
+                        connectionInfo={connectionInfo}
                     />
                 </div>
-
-                {/* Connection Test - Only show in development */}
-                {/*                {process.env.NODE_ENV === 'development' && (
-                    <div className="mb-8">
-                        <SimpleTest />
-                        <ConnectionTest />
-                    </div>
-                )} */}
 
                 {/* Setpoints Section */}
                 <div className="mb-8">
@@ -245,7 +355,7 @@ function App() {
                     <h2 className="text-2xl font-semibold text-gray-800 mb-6">
                         📊 Sensores
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <SensorCard
                             title="Temperatura"
                             value={sensorData.temperature}
@@ -273,76 +383,80 @@ function App() {
                     </div>
                 </div>
 
-
-
-                {/* Actuators Section */}
+                {/* Actuator Indicators Section */}
                 <div className="mb-8">
                     <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-                        ⚡ Actuadores y Controles
+                        ⚡ Indicadores de Actuadores
                     </h2>
                     <p className="text-gray-600 mb-4">
-                        Los controles manuales permiten activar/desactivar actuadores. Los indicadores muestran el estado de actuadores automáticos.
+                        Estado de los actuadores automáticos del sistema
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <ActuatorControl
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <ActuatorIndicator
                             title="Bombilla de Calefacción"
                             isOn={sensorData.bulbOn}
-                            onToggle={() => toggleActuator(47, 'bulbOn')}
                             icon={Icons.bulb}
                             color="yellow"
-                            description="Control de temperatura (Manual)"
-                            loading={loading.bulb}
-                            isControl={true}
+                            description="Control automático de temperatura"
+                            type="bulb"
                         />
-                        <ActuatorControl
+                        <ActuatorIndicator
                             title="Ventilador de Temperatura"
                             isOn={sensorData.ventTempOn}
-                            onToggle={() => toggleActuator(49, 'ventTempOn')}
                             icon={Icons.fan}
                             color="blue"
-                            description="Enfriamiento (Manual)"
-                            loading={loading.ventTemp}
-                            isControl={true}
+                            description="Enfriamiento automático"
+                            type="fan"
                         />
-                        <ActuatorControl
+                        <ActuatorIndicator
                             title="Ventilador de Humedad"
                             isOn={sensorData.ventHumOn}
-                            onToggle={null}
                             icon={Icons.fan}
                             color="green"
                             description="Control automático de humedad"
-                            loading={false}
-                            isControl={false}
+                            type="fan"
                         />
-                        <ActuatorControl
+                        <ActuatorIndicator
                             title="Bomba de Agua"
                             isOn={sensorData.pumpOn}
-                            onToggle={null}
                             icon={Icons.pump}
                             color="blue"
                             description="Riego automático"
-                            loading={false}
-                            isControl={false}
+                            type="pump"
                         />
-                        <ActuatorControl
+                    </div>
+                </div>
+
+                {/* Remote Controls Section */}
+                <div className="mb-8">
+                    <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+                        🎮 Controles Remotos
+                    </h2>
+                    <p className="text-gray-600 mb-4">
+                        Controles manuales para actuadores remotos
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <RemoteControl
                             title="Control Remoto 1"
                             isOn={sensorData.remote1On}
-                            onToggle={null}
+                            onToggle={() => toggleRemoteActuator(47, 'remote1On')}
                             icon={Icons.remote}
                             color="purple"
-                            description="Indicador de estado"
-                            loading={false}
-                            isControl={false}
+                            description="Control remoto manual 1"
+                            loading={loading.remote1}
+                            actuatorId="47"
+                            isProtected={recentChanges.remote1On !== null}
                         />
-                        <ActuatorControl
+                        <RemoteControl
                             title="Control Remoto 2"
                             isOn={sensorData.remote2On}
-                            onToggle={null}
+                            onToggle={() => toggleRemoteActuator(49, 'remote2On')}
                             icon={Icons.remote}
                             color="purple"
-                            description="Indicador de estado"
-                            loading={false}
-                            isControl={false}
+                            description="Control remoto manual 2"
+                            loading={loading.remote2}
+                            actuatorId="49"
+                            isProtected={recentChanges.remote2On !== null}
                         />
                     </div>
                 </div>

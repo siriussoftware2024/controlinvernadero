@@ -1,12 +1,24 @@
 import axios from 'axios';
 
-// Use Arduino directly (CORS should be fixed now)
-const API_BASE_URL = 'http://192.168.2.11';
+// Get configuration from environment variables
+const ARDUINO_IP = process.env.REACT_APP_ARDUINO_IP || '192.168.2.14';
+const ARDUINO_PORT = process.env.REACT_APP_ARDUINO_PORT || '80';
+const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT) || 10000;
+
+// Build API base URL
+const API_BASE_URL = `http://${ARDUINO_IP}:${ARDUINO_PORT}`;
+
+// Log connection information
+console.log('🔧 API Configuration:');
+console.log('📍 Arduino IP:', ARDUINO_IP);
+console.log('🔌 Arduino Port:', ARDUINO_PORT);
+console.log('⏱️  API Timeout:', API_TIMEOUT);
+console.log('🌐 API Base URL:', API_BASE_URL);
 
 // Create axios instance with timeout and CORS headers
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // Increased timeout
+  timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -55,6 +67,14 @@ api.interceptors.response.use(
 
 // API functions
 export const greenhouseAPI = {
+  // Get connection info
+  getConnectionInfo: () => ({
+    ip: ARDUINO_IP,
+    port: ARDUINO_PORT,
+    baseUrl: API_BASE_URL,
+    timeout: API_TIMEOUT
+  }),
+
   // Get all sensor data
   getData: async () => {
     try {

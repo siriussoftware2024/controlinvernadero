@@ -1,178 +1,167 @@
 # 🌱 Control de Invernadero
 
-Sistema de monitoreo y control inteligente para invernaderos desarrollado con React y Tailwind CSS.
+Sistema de monitoreo y control inteligente para invernaderos con interfaz web moderna desarrollada en React y Tailwind CSS.
 
 ## 🚀 Características
 
-- **Monitoreo en tiempo real** de sensores de temperatura, humedad del aire y suelo
-- **Control de actuadores** con switches interactivos
-- **Configuración de referencias** para temperatura y humedad
-- **Indicadores de estado** con colores según los valores de los sensores
-- **Interfaz responsiva** que funciona en dispositivos móviles y de escritorio
-- **Actualización automática** cada 5 segundos
-- **Indicador de conexión** con el sistema Arduino
+- **Monitoreo en tiempo real** de sensores (temperatura, humedad, humedad del suelo)
+- **Control manual** de actuadores remotos
+- **Indicadores automáticos** de actuadores (bombillas, ventiladores, bombas)
+- **Configuración de setpoints** para temperatura y humedad
+- **Interfaz responsiva** con animaciones y efectos visuales
+- **Sistema de notificaciones** elegante
+- **Configuración flexible** mediante variables de entorno
 
-## 📊 Sensores Monitoreados
+## 📋 Requisitos
 
-- **Temperatura**: Control automático con bombilla de calefacción y ventilador
-- **Humedad del Aire**: Control con ventilador de humedad
-- **Humedad del Suelo**: Control con bomba de agua para riego automático
-
-## ⚡ Actuadores Controlados
-
-- **Bombilla de Calefacción** (ID: 47) - Control de temperatura
-- **Ventilador de Temperatura** (ID: 49) - Enfriamiento
-- **Ventilador de Humedad** (ID: 51) - Control de humedad del aire
-- **Bomba de Agua** (ID: 53) - Riego automático
-- **Control Remoto 1** (ID: 55) - Actuador adicional
-- **Control Remoto 2** (ID: 57) - Actuador adicional
-
-## 🛠️ Tecnologías Utilizadas
-
-- **React 18** - Framework de JavaScript
-- **Tailwind CSS** - Framework de CSS utilitario
-- **Axios** - Cliente HTTP para las peticiones a la API
-- **Netlify** - Plataforma de despliegue
-
-## 📦 Instalación
-
-### Prerrequisitos
-
-- Node.js (versión 14 o superior)
+- Node.js 14+ 
 - npm o yarn
+- Arduino con ESP8266 configurado
+- Conexión WiFi
 
-### Pasos de instalación
+## ⚙️ Configuración
 
-1. **Clonar el repositorio**
-   ```bash
-   git clone <url-del-repositorio>
-   cd control-invernadero
-   ```
+### 1. Variables de Entorno
 
-2. **Instalar dependencias**
-   ```bash
-   npm install
-   ```
+Crea un archivo `.env` en la raíz del proyecto basándote en `env.example`:
 
-3. **Configurar la URL del Arduino**
-   
-   Edita el archivo `src/services/api.js` y cambia la variable `API_BASE_URL` con la IP de tu Arduino:
-   ```javascript
-   const API_BASE_URL = 'http://192.168.2.14'; // Cambia por tu IP
-   ```
+```bash
+# Copia el archivo de ejemplo
+cp env.example .env
+```
 
-4. **Ejecutar en modo desarrollo**
-   ```bash
-   npm start
-   ```
+Edita el archivo `.env` con tu configuración:
 
-   La aplicación se abrirá en `http://localhost:3000`
+```env
+# Configuración de la API del Arduino
+REACT_APP_ARDUINO_IP=192.168.2.14
+REACT_APP_ARDUINO_PORT=80
+REACT_APP_API_TIMEOUT=10000
 
-## 🚀 Despliegue en Netlify
+# Configuración del entorno
+REACT_APP_ENVIRONMENT=development
+REACT_APP_APP_NAME=Control de Invernadero
+REACT_APP_VERSION=1.0.0
+```
 
-### Opción 1: Despliegue automático desde GitHub
+### 2. Instalación de Dependencias
 
-1. **Subir el código a GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
+```bash
+npm install
+```
 
-2. **Conectar con Netlify**
-   - Ve a [netlify.com](https://netlify.com)
-   - Crea una cuenta o inicia sesión
-   - Haz clic en "New site from Git"
-   - Selecciona tu repositorio de GitHub
-   - Configura las opciones de build:
-     - **Build command**: `npm run build`
-     - **Publish directory**: `build`
-   - Haz clic en "Deploy site"
+### 3. Desarrollo Local
 
-### Opción 2: Despliegue manual
+```bash
+npm start
+```
 
-1. **Construir la aplicación**
-   ```bash
-   npm run build
-   ```
+La aplicación estará disponible en `http://localhost:3000`
 
-2. **Subir a Netlify**
-   - Ve a [netlify.com](https://netlify.com)
-   - Arrastra la carpeta `build` al área de despliegue
-   - Tu sitio estará disponible en una URL de Netlify
+### 4. Construcción para Producción
+
+```bash
+npm run build
+```
 
 ## 🔧 Configuración del Arduino
 
-Asegúrate de que tu Arduino esté configurado con los siguientes endpoints:
+### Endpoints Disponibles
 
-### Endpoints de Sensores
-- `GET /datos` - Obtiene todos los datos de los sensores
+- `GET /datos` - Obtiene todos los datos de sensores y estado de actuadores
+- `GET /cmd/ON{id}` - Activa un actuador específico
+- `GET /cmd/OFF{id}` - Desactiva un actuador específico
+- `GET /setpoint/temp/{value}` - Establece el setpoint de temperatura
+- `GET /setpoint/hum/{value}` - Establece el setpoint de humedad
 
-### Endpoints de Control
-- `GET /cmd/ON{id}` - Enciende un actuador
-- `GET /cmd/OFF{id}` - Apaga un actuador
+### Formato de Respuesta JSON
 
-### Endpoints de Configuración
-- `GET /setpoint/temp/{valor}` - Establece referencia de temperatura
-- `GET /setpoint/hum/{valor}` - Establece referencia de humedad
+```json
+{
+  "temperature": 25.5,
+  "humidity": 65,
+  "soilHumidity": 450,
+  "bulbOn": false,
+  "ventTempOn": true,
+  "ventHumOn": false,
+  "pumpOn": false,
+  "remote1On": false,
+  "remote2On": true,
+  "setpointTemp": 80.0,
+  "setpointHum": 70.0
+}
+```
 
-## 📱 Uso de la Aplicación
+## 🎮 Controles
 
-### Monitoreo de Sensores
-- Los valores de los sensores se actualizan automáticamente cada 5 segundos
-- Los colores de las tarjetas indican el estado:
-  - 🟢 Verde: Valores normales
-  - 🟡 Amarillo: Valores de advertencia
-  - 🔴 Rojo: Valores críticos
+### Actuadores Automáticos (Indicadores)
+- **Bombilla de Calefacción**: Control automático de temperatura
+- **Ventilador de Temperatura**: Enfriamiento automático
+- **Ventilador de Humedad**: Control automático de humedad
+- **Bomba de Agua**: Riego automático
 
-### Control de Actuadores
-- Usa los switches para encender/apagar los actuadores
-- El estado se actualiza inmediatamente en la interfaz
-- Los actuadores se controlan mediante los IDs configurados
+### Controles Manuales
+- **Control Remoto 1**: Actuador manual (ID: 47)
+- **Control Remoto 2**: Actuador manual (ID: 49)
 
-### Configuración de Referencias
-- Usa los sliders para ajustar las referencias de temperatura y humedad
-- También puedes escribir el valor directamente en el campo numérico
-- Los cambios se envían automáticamente al Arduino
+## 📊 Sensores
 
-## 🔒 Consideraciones de Seguridad
+- **Temperatura**: Monitoreo en tiempo real con setpoint configurable
+- **Humedad del Aire**: Control de humedad ambiental
+- **Humedad del Suelo**: Monitoreo de riego
 
-- La aplicación está diseñada para uso en redes locales
-- Considera implementar autenticación para uso en producción
-- Asegúrate de que tu Arduino tenga las medidas de seguridad apropiadas
+## 🎨 Características de la Interfaz
 
-## 🐛 Solución de Problemas
+- **Actualización optimista**: Respuesta inmediata a controles
+- **Protección de cambios**: Evita conflictos con auto-refresh
+- **Animaciones**: Efectos visuales para actuadores activos
+- **Notificaciones**: Sistema de alertas elegante
+- **Información de conexión**: Muestra IP y configuración del Arduino
 
-### Error de conexión
-- Verifica que la IP del Arduino sea correcta
-- Asegúrate de que el Arduino esté en la misma red
-- Comprueba que los endpoints estén funcionando
+## 🔍 Solución de Problemas
 
-### Problemas de CORS
-- Si tienes problemas de CORS, considera usar un proxy o configurar el Arduino para permitir peticiones desde tu dominio
-- **Solución inmediata**: El proyecto incluye un proxy configurado en `package.json` que resuelve problemas de CORS en desarrollo
-- **Solución permanente**: Configura CORS en tu Arduino (ver archivo `arduino-cors-setup.md`)
-- **Verificación**: Usa el componente de prueba de conexión que aparece en modo desarrollo
+### Error de CORS
+Si experimentas errores de CORS, asegúrate de que el Arduino tenga configurados los headers CORS correctos.
 
-### Valores no se actualizan
-- Verifica la conexión de red
-- Revisa la consola del navegador para errores
-- Comprueba que el Arduino esté respondiendo correctamente
+### Problemas de Conexión
+1. Verifica que la IP del Arduino sea correcta en el archivo `.env`
+2. Asegúrate de que el Arduino esté en la misma red WiFi
+3. Comprueba que el puerto 80 esté abierto
+
+### Latencia en Controles
+- Los controles manuales tienen actualización optimista
+- El sistema protege los cambios recientes por 3 segundos
+- Los indicadores automáticos se actualizan cada 2 segundos
+
+## 📱 Despliegue
+
+### Netlify
+1. Conecta tu repositorio a Netlify
+2. Configura las variables de entorno en Netlify
+3. El build se ejecutará automáticamente
+
+### Variables de Entorno en Producción
+Asegúrate de configurar las variables de entorno en tu plataforma de hosting:
+- `REACT_APP_ARDUINO_IP`
+- `REACT_APP_ARDUINO_PORT`
+- `REACT_APP_API_TIMEOUT`
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
-## 🤝 Contribuciones
+## 👨‍💻 Autor
 
-Las contribuciones son bienvenidas. Por favor, abre un issue o un pull request para sugerir mejoras.
-
-## 📞 Soporte
-
-Si tienes problemas o preguntas, puedes:
-- Abrir un issue en GitHub
-- Contactar al desarrollador
+Desarrollado con ❤️ para el control inteligente de invernaderos.
 
 ---
 
-**Desarrollado con ❤️ para el control inteligente de invernaderos** 
+**Nota**: Asegúrate de que el Arduino esté configurado correctamente y que la IP en el archivo `.env` coincida con la IP asignada a tu dispositivo Arduino. 
