@@ -1,56 +1,59 @@
 # 🌱 Control de Invernadero
 
-Sistema de monitoreo y control inteligente para invernaderos con interfaz web moderna desarrollada en React y Tailwind CSS.
+Sistema de monitoreo y control inteligente para invernaderos con Arduino y React.
 
-## 🚀 Características
+## ✨ Características
 
-- **Monitoreo en tiempo real** de sensores (temperatura, humedad, humedad del suelo)
+- **Monitoreo en tiempo real** de sensores (temperatura, humedad del aire, humedad del suelo)
+- **Control automático** de actuadores (bombilla, ventiladores, bomba de agua)
 - **Control manual** de actuadores remotos
-- **Indicadores automáticos** de actuadores (bombillas, ventiladores, bombas)
-- **Configuración de setpoints** para temperatura y humedad
-- **Interfaz responsiva** con animaciones y efectos visuales
-- **Sistema de notificaciones** elegante
-- **Configuración flexible** mediante variables de entorno
+- **Configuración de referencias** (setpoints) para temperatura y humedad
+- **Configuración dinámica de conexión** desde la interfaz
+- **Interfaz moderna** con Tailwind CSS y animaciones
+- **Notificaciones en tiempo real** para feedback del usuario
+- **Persistencia de configuración** en localStorage
 
-## 📋 Requisitos
+## 🚀 Configuración
 
-- Node.js 14+ 
-- npm o yarn
-- Arduino con ESP8266 configurado
-- Conexión WiFi
+### Requisitos
 
-## ⚙️ Configuración
+- Node.js 14+ y npm
+- Arduino con ESP8266
+- Sensores: DHT22 (temperatura/humedad), sensor de humedad del suelo
+- Actuadores: Bombilla, ventiladores, bomba de agua, controles remotos
 
-### 1. Variables de Entorno
+### Instalación
 
-Crea un archivo `.env` en la raíz del proyecto basándote en `env.example`:
+1. **Clonar el repositorio**
+   ```bash
+   git clone <repository-url>
+   cd appControlInvernadero
+   ```
 
-```bash
-# Copia el archivo de ejemplo
-cp env.example .env
-```
+2. **Instalar dependencias**
+   ```bash
+   npm install
+   ```
 
-Edita el archivo `.env` con tu configuración:
+3. **Configurar variables de entorno**
+   ```bash
+   cp env.example .env
+   ```
+   
+   Editar `.env` con tu configuración:
+   ```env
+   # Configuración de la API del Arduino
+   REACT_APP_ARDUINO_IP=192.168.2.14
+   REACT_APP_ARDUINO_PORT=80
+   REACT_APP_API_TIMEOUT=10000
 
-```env
-# Configuración de la API del Arduino
-REACT_APP_ARDUINO_IP=192.168.2.14
-REACT_APP_ARDUINO_PORT=80
-REACT_APP_API_TIMEOUT=10000
+   # Configuración del entorno
+   REACT_APP_ENVIRONMENT=development
+   REACT_APP_APP_NAME=Control de Invernadero
+   REACT_APP_VERSION=1.0.0
+   ```
 
-# Configuración del entorno
-REACT_APP_ENVIRONMENT=development
-REACT_APP_APP_NAME=Control de Invernadero
-REACT_APP_VERSION=1.0.0
-```
-
-### 2. Instalación de Dependencias
-
-```bash
-npm install
-```
-
-### 3. Desarrollo Local
+### Desarrollo Local
 
 ```bash
 npm start
@@ -58,21 +61,47 @@ npm start
 
 La aplicación estará disponible en `http://localhost:3000`
 
-### 4. Construcción para Producción
+### Build de Producción
 
 ```bash
 npm run build
 ```
 
-## 🔧 Configuración del Arduino
+## 🔧 Configuración de Conexión
 
-### Endpoints Disponibles
+### Desde Variables de Entorno
 
-- `GET /datos` - Obtiene todos los datos de sensores y estado de actuadores
-- `GET /cmd/ON{id}` - Activa un actuador específico
-- `GET /cmd/OFF{id}` - Desactiva un actuador específico
-- `GET /setpoint/temp/{value}` - Establece el setpoint de temperatura
-- `GET /setpoint/hum/{value}` - Establece el setpoint de humedad
+La aplicación lee la configuración inicial desde el archivo `.env`:
+
+- `REACT_APP_ARDUINO_IP`: IP del Arduino (por defecto: 192.168.2.14)
+- `REACT_APP_ARDUINO_PORT`: Puerto del Arduino (por defecto: 80)
+- `REACT_APP_API_TIMEOUT`: Timeout de la API en ms (por defecto: 10000)
+
+### Desde la Interfaz
+
+La aplicación incluye un panel de configuración que permite:
+
+1. **Cambiar la IP del Arduino** sin reiniciar la aplicación
+2. **Probar la conexión** antes de guardar cambios
+3. **Configurar puerto y timeout** personalizados
+4. **Resetear a valores por defecto** cuando sea necesario
+5. **Persistencia automática** de la configuración en localStorage
+
+**Para cambiar la IP:**
+1. Hacer clic en "Configurar" en el panel de configuración
+2. Ingresar la nueva IP del Arduino
+3. Hacer clic en "Probar Conexión" para verificar
+4. Hacer clic en "Guardar y Conectar" para aplicar los cambios
+
+## 🏗️ Configuración del Arduino
+
+### Endpoints de la API
+
+- `GET /datos` - Obtener todos los datos de sensores y estado
+- `GET /cmd/ON{id}` - Encender actuador con ID específico
+- `GET /cmd/OFF{id}` - Apagar actuador con ID específico
+- `GET /setpoint/temp/{value}` - Establecer referencia de temperatura
+- `GET /setpoint/hum/{value}` - Establecer referencia de humedad
 
 ### Formato de Respuesta JSON
 
@@ -80,14 +109,14 @@ npm run build
 {
   "temperature": 25.5,
   "humidity": 65,
-  "soilHumidity": 450,
+  "soilHumidity": 45,
   "bulbOn": false,
   "ventTempOn": true,
   "ventHumOn": false,
   "pumpOn": false,
   "remote1On": false,
   "remote2On": true,
-  "setpointTemp": 80.0,
+  "setpointTemp": 24.0,
   "setpointHum": 70.0
 }
 ```
@@ -95,72 +124,86 @@ npm run build
 ## 🎮 Controles
 
 ### Actuadores Automáticos (Indicadores)
-- **Bombilla de Calefacción**: Control automático de temperatura
-- **Ventilador de Temperatura**: Enfriamiento automático
-- **Ventilador de Humedad**: Control automático de humedad
-- **Bomba de Agua**: Riego automático
+
+- **Bombilla de Calefacción**: Se enciende automáticamente cuando la temperatura está por debajo del setpoint
+- **Ventilador de Temperatura**: Se enciende automáticamente cuando la temperatura está por encima del setpoint
+- **Ventilador de Humedad**: Se enciende automáticamente para controlar la humedad del aire
+- **Bomba de Agua**: Se enciende automáticamente cuando la humedad del suelo está baja
 
 ### Controles Manuales
-- **Control Remoto 1**: Actuador manual (ID: 47)
-- **Control Remoto 2**: Actuador manual (ID: 49)
+
+- **Control Remoto 1** (ID: 47): Control manual independiente
+- **Control Remoto 2** (ID: 49): Control manual independiente
+
+### Referencias (Setpoints)
+
+- **Temperatura**: Rango 0-50°C, controla la activación de bombilla y ventilador
+- **Humedad**: Rango 0-100%, controla la activación del ventilador de humedad
 
 ## 📊 Sensores
 
-- **Temperatura**: Monitoreo en tiempo real con setpoint configurable
-- **Humedad del Aire**: Control de humedad ambiental
-- **Humedad del Suelo**: Monitoreo de riego
+- **Temperatura**: Muestra la temperatura actual del invernadero
+- **Humedad del Aire**: Muestra la humedad relativa del aire
+- **Humedad del Suelo**: Muestra el nivel de humedad del suelo
 
 ## 🎨 Características de la Interfaz
 
-- **Actualización optimista**: Respuesta inmediata a controles
-- **Protección de cambios**: Evita conflictos con auto-refresh
-- **Animaciones**: Efectos visuales para actuadores activos
-- **Notificaciones**: Sistema de alertas elegante
-- **Información de conexión**: Muestra IP y configuración del Arduino
+- **Diseño responsivo** que se adapta a diferentes tamaños de pantalla
+- **Animaciones CSS** para indicadores de actuadores (bombilla parpadea, ventilador gira, bomba pulsa)
+- **Efectos hover** en todas las tarjetas
+- **Notificaciones elegantes** para feedback del usuario
+- **Actualización automática** cada 2 segundos
+- **Actualizaciones optimistas** para mejor experiencia de usuario
+- **Indicadores de estado** con colores y iconos intuitivos
 
 ## 🔍 Solución de Problemas
 
-### Error de CORS
-Si experimentas errores de CORS, asegúrate de que el Arduino tenga configurados los headers CORS correctos.
-
 ### Problemas de Conexión
-1. Verifica que la IP del Arduino sea correcta en el archivo `.env`
-2. Asegúrate de que el Arduino esté en la misma red WiFi
-3. Comprueba que el puerto 80 esté abierto
 
-### Latencia en Controles
-- Los controles manuales tienen actualización optimista
-- El sistema protege los cambios recientes por 3 segundos
-- Los indicadores automáticos se actualizan cada 2 segundos
+1. **Verificar IP del Arduino**
+   - Usar el panel de configuración para cambiar la IP
+   - Probar la conexión antes de guardar
 
-## 📱 Despliegue
+2. **Error de CORS**
+   - El Arduino debe incluir headers CORS en sus respuestas
+   - Verificar que el código del Arduino incluya los headers necesarios
+
+3. **Timeout de conexión**
+   - Aumentar el timeout en la configuración
+   - Verificar que el Arduino esté respondiendo
+
+### Problemas de Control
+
+1. **Actuadores no responden**
+   - Verificar que los IDs de actuadores sean correctos
+   - Comprobar que el Arduino esté procesando los comandos
+
+2. **Latencia en controles manuales**
+   - La aplicación usa actualizaciones optimistas para mejor UX
+   - Los cambios se confirman automáticamente en la siguiente actualización
+
+## 🚀 Despliegue
 
 ### Netlify
-1. Conecta tu repositorio a Netlify
-2. Configura las variables de entorno en Netlify
+
+1. Conectar el repositorio a Netlify
+2. Configurar las variables de entorno en Netlify
 3. El build se ejecutará automáticamente
 
 ### Variables de Entorno en Producción
-Asegúrate de configurar las variables de entorno en tu plataforma de hosting:
+
+En Netlify, configurar:
 - `REACT_APP_ARDUINO_IP`
 - `REACT_APP_ARDUINO_PORT`
 - `REACT_APP_API_TIMEOUT`
 
-## 🤝 Contribución
+## 📝 Licencia
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+MIT License
 
 ## 👨‍💻 Autor
 
-Desarrollado con ❤️ para el control inteligente de invernaderos.
+Sistema de Control de Invernadero - Desarrollado con React y Arduino
 
 ---
 

@@ -1,31 +1,35 @@
 import axios from 'axios';
+import { configStorage } from '../utils/configStorage';
 
-// Get configuration from environment variables
-const ARDUINO_IP = process.env.REACT_APP_ARDUINO_IP || '192.168.2.14';
-const ARDUINO_PORT = process.env.REACT_APP_ARDUINO_PORT || '80';
-const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT) || 10000;
+// Load configuration from localStorage or use defaults
+const savedConfig = configStorage.loadConfig();
+const defaultConfig = configStorage.getDefaultConfig();
 
-// Build API base URL
-const API_BASE_URL = `http://${ARDUINO_IP}:${ARDUINO_PORT}`;
+// Configuration state
+let config = savedConfig || defaultConfig;
 
-// Log connection information
-console.log('🔧 API Configuration:');
-console.log('📍 Arduino IP:', ARDUINO_IP);
-console.log('🔌 Arduino Port:', ARDUINO_PORT);
-console.log('⏱️  API Timeout:', API_TIMEOUT);
-console.log('🌐 API Base URL:', API_BASE_URL);
+// Create axios instance
+let api = createApiInstance();
 
-// Create axios instance with timeout and CORS headers
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-  // Add withCredentials for CORS
-  withCredentials: false,
-});
+function createApiInstance() {
+  const baseURL = `http://${config.ip}:${config.port}`;
+
+  console.log('🔧 API Configuration:');
+  console.log('📍 Arduino IP:', config.ip);
+  console.log('🔌 Arduino Port:', config.port);
+  console.log('⏱️  API Timeout:', config.timeout);
+  console.log('🌐 API Base URL:', baseURL);
+
+  return axios.create({
+    baseURL: baseURL,
+    timeout: config.timeout,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    withCredentials: false,
+  });
+}
 
 // Add request interceptor for debugging
 api.interceptors.request.use(
@@ -67,13 +71,55 @@ api.interceptors.response.use(
 
 // API functions
 export const greenhouseAPI = {
+  // Update configuration
+  updateConfig: (newConfig) => {
+    config = { ...config, ...newConfig };
+    api = createApiInstance();
+
+    // Save to localStorage
+    configStorage.saveConfig(config);
+
+    console.log('🔄 API Configuration updated:', config);
+  },
+
+  // Reset to default configuration
+  resetConfig: () => {
+    config = defaultConfig;
+    api = createApiInstance();
+
+    // Clear localStorage
+    configStorage.clearConfig();
+
+    console.log('🔄 API Configuration reset to defaults:', config);
+  },
+
   // Get connection info
   getConnectionInfo: () => ({
-    ip: ARDUINO_IP,
-    port: ARDUINO_PORT,
-    baseUrl: API_BASE_URL,
-    timeout: API_TIMEOUT
+    ip: config.ip,
+    port: config.port,
+    baseUrl: `http://${config.ip}:${config.port}`,
+    timeout: config.timeout
   }),
+
+  // Test connection with specific config
+  testConnection: async (ip, port, timeout) => {
+    try {
+      const testApi = axios.create({
+        baseURL: `http://${ip}:${port}`,
+        timeout: parseInt(timeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        withCredentials: false,
+      });
+
+      const response = await testApi.get('/datos');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
 
   // Get all sensor data
   getData: async () => {
@@ -149,16 +195,6 @@ export const greenhouseAPI = {
     } catch (error) {
       console.error('Error setting humidity setpoint:', error);
       throw new Error(`Error al establecer humedad: ${error.message}`);
-    }
-  },
-
-  // Test connection
-  testConnection: async () => {
-    try {
-      const response = await api.get('/datos');
-      return { success: true, data: response.data };
-    } catch (error) {
-      return { success: false, error: error.message };
     }
   },
 };

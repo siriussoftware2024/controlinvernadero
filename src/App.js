@@ -4,6 +4,7 @@ import ActuatorIndicator from './components/ActuatorIndicator';
 import RemoteControl from './components/RemoteControl';
 import SetpointControl from './components/SetpointControl';
 import StatusIndicator from './components/StatusIndicator';
+import ConnectionConfig from './components/ConnectionConfig';
 import Notification from './components/Notification';
 import ConnectionTest from './components/ConnectionTest';
 import SimpleTest from './components/SimpleTest';
@@ -92,6 +93,73 @@ function App() {
 
     // Get connection information
     const connectionInfo = greenhouseAPI.getConnectionInfo();
+
+    // Handle connection configuration change
+    const handleConnectionChange = async (newConfig) => {
+        try {
+            // Update API configuration
+            greenhouseAPI.updateConfig(newConfig);
+
+            // Clear recent changes to avoid conflicts
+            setRecentChanges({
+                remote1On: null,
+                remote2On: null,
+                setpointTemp: null,
+                setpointHum: null
+            });
+
+            // Reset connection status
+            setConnectionStatus({
+                isConnected: false,
+                lastUpdate: null,
+                error: null
+            });
+
+            // Show success notification
+            showNotification(`Conexión actualizada a ${newConfig.ip}:${newConfig.port}`, 'success');
+
+            // Fetch data with new configuration
+            setTimeout(fetchData, 500);
+        } catch (error) {
+            showNotification(`Error al actualizar configuración: ${error.message}`, 'error');
+        }
+    };
+
+    // Handle connection test
+    const handleTestConnection = async (ip, port, timeout) => {
+        return await greenhouseAPI.testConnection(ip, port, timeout);
+    };
+
+    // Handle configuration reset
+    const handleResetConfig = async () => {
+        try {
+            // Reset API configuration
+            greenhouseAPI.resetConfig();
+
+            // Clear recent changes to avoid conflicts
+            setRecentChanges({
+                remote1On: null,
+                remote2On: null,
+                setpointTemp: null,
+                setpointHum: null
+            });
+
+            // Reset connection status
+            setConnectionStatus({
+                isConnected: false,
+                lastUpdate: null,
+                error: null
+            });
+
+            // Show success notification
+            showNotification('Configuración reseteada a valores por defecto', 'success');
+
+            // Fetch data with default configuration
+            setTimeout(fetchData, 500);
+        } catch (error) {
+            showNotification(`Error al resetear configuración: ${error.message}`, 'error');
+        }
+    };
 
     // Show notification function
     const showNotification = (message, type = 'info') => {
@@ -314,6 +382,16 @@ function App() {
                         lastUpdate={connectionStatus.lastUpdate}
                         error={connectionStatus.error}
                         connectionInfo={connectionInfo}
+                    />
+                </div>
+
+                {/* Connection Configuration */}
+                <div className="mb-8">
+                    <ConnectionConfig
+                        currentConnectionInfo={connectionInfo}
+                        onConnectionChange={handleConnectionChange}
+                        onTestConnection={handleTestConnection}
+                        onResetConfig={handleResetConfig}
                     />
                 </div>
 
