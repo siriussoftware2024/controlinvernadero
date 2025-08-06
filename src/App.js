@@ -6,8 +6,6 @@ import SetpointControl from './components/SetpointControl';
 import StatusIndicator from './components/StatusIndicator';
 import ConnectionConfig from './components/ConnectionConfig';
 import Notification from './components/Notification';
-import ConnectionTest from './components/ConnectionTest';
-import SimpleTest from './components/SimpleTest';
 import { greenhouseAPI } from './services/api';
 
 // Icons for sensors and actuators
